@@ -43,7 +43,7 @@ out/
 *.tmp
 
 # Solidity compiled files
-*.json
+# *.json
 *.bin
 *.abi
 
