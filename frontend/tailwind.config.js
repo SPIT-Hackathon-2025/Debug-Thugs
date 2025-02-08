@@ -7,6 +7,9 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        'orbitron': ['Orbitron', 'sans-serif'],
+      },
       gradientColorStops: {
         'blue': {
           '500': '#3B82F6',

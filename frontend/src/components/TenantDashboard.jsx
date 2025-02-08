@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS, MONITORED_ADDRESSES } from '../config/contracts';
+import { getMaticPrice } from '../utils/price';
 
 const TenantDashboard = () => {
   const [apartments, setApartments] = useState([]);
@@ -8,6 +9,9 @@ const TenantDashboard = () => {
   const [activeTab, setActiveTab] = useState('available');
   const [loading, setLoading] = useState(false);
   const [account, setAccount] = useState(null);
+  const [balance, setBalance] = useState('0');
+  const [maticPrice, setMaticPrice] = useState(null);
+  const [usdBalance, setUsdBalance] = useState('0');
 
   const contractAddress = CONTRACT_ADDRESSES.PaymentDeposit;
 
@@ -17,6 +21,7 @@ const TenantDashboard = () => {
       if (window.ethereum) {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         setAccount(accounts[0]);
+        await fetchBalance(accounts[0]);
       }
     };
     fetchAccount();
@@ -27,6 +32,16 @@ const TenantDashboard = () => {
       fetchTransactions();
     }
   }, [account, activeTab]);
+
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (account) {
+        await fetchBalance(account);
+      }
+    }, 10000); // Update every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [account]);
 
   const fetchApartments = async () => {
     try {
@@ -136,9 +151,75 @@ const TenantDashboard = () => {
     }
   };
 
-  return (
+  const fetchBalance = async (address) => {
+    try {
+      if (!window.ethereum) {
+        console.error('MetaMask is not installed');
+        return;
+      }
+
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const balanceWei = await provider.getBalance(address);
+      const balanceEth = ethers.utils.formatEther(balanceWei);
+      const balanceMatic = parseFloat(balanceEth).toFixed(4);
+      setBalance(balanceMatic);
+
+      // Fetch MATIC price and calculate USD value
+      const price = await getMaticPrice();
+      if (price) {
+        setMaticPrice(price);
+        const usdValue = (parseFloat(balanceMatic) * price).toFixed(2);
+        setUsdBalance(usdValue);
+      }
+
+      // Update listeners
+      window.ethereum.on('accountsChanged', async (accounts) => {
+        if (accounts.length > 0) {
+          const newBalance = await provider.getBalance(accounts[0]);
+          const newBalanceMatic = parseFloat(ethers.utils.formatEther(newBalance)).toFixed(4);
+          setBalance(newBalanceMatic);
+          if (maticPrice) {
+            const newUsdValue = (parseFloat(newBalanceMatic) * maticPrice).toFixed(2);
+            setUsdBalance(newUsdValue);
+          }
+        }
+      });
+
+      // Add listener for chain changes to update balance
+      window.ethereum.on('chainChanged', async () => {
+        const accounts = await provider.listAccounts();
+        if (accounts.length > 0) {
+          const newBalance = await provider.getBalance(accounts[0]);
+          const newBalanceMatic = parseFloat(ethers.utils.formatEther(newBalance)).toFixed(4);
+          setBalance(newBalanceMatic);
+          if (maticPrice) {
+            const newUsdValue = (parseFloat(newBalanceMatic) * maticPrice).toFixed(2);
+            setUsdBalance(newUsdValue);
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+      setBalance('0');
+      setUsdBalance('0');
+    }
+  };
+
+    return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 dark:text-white">Tenant Dashboard</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold dark:text-white">Tenant Dashboard</h1>
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Wallet Balance</p>
+          <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+            {balance} MATIC
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            ≈ ${usdBalance} USD
+          </p>
+        </div>
+      </div>
 
       <div className="flex space-x-4 mb-8">
         <button
@@ -166,42 +247,53 @@ const TenantDashboard = () => {
       {activeTab === 'available' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {apartments.filter(apt => apt.available).map((apt) => (
-            <div key={apt._id} className="border rounded-lg p-4 shadow bg-white dark:bg-gray-800 dark:border-gray-700">
-              <img src={apt.image} alt={apt.title} className="w-full h-48 object-cover rounded mb-4" />
-              <h3 className="text-xl font-semibold dark:text-white">{apt.title}</h3>
-              <p className="text-gray-600 dark:text-gray-300">{apt.description}</p>
-              <p className="text-blue-500 dark:text-blue-400 font-semibold">{apt.rent} ETH/month</p>
-              <p className="text-gray-500 dark:text-gray-400">{apt.location}</p>
-              
-              <div className="mt-4">
-                <button
-                  onClick={() => handleRentPayment(apt)}
-                  disabled={loading}
-                  className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600 
-                    transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Processing...' : 'Rent Now'}
-                </button>
-              </div>
-
-              <div className="mt-4">
-                <h4 className="font-semibold mb-2 dark:text-white">Reviews</h4>
-                {apt.reviews?.map((review, index) => (
-                  <div key={index} className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                    {review}
-                  </div>
-                ))}
-                <textarea
-                  className="w-full border rounded p-2 mt-2 dark:bg-gray-700 dark:border-gray-600 
-                    dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Write a review..."
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      submitReview(apt._id, e.target.value);
-                      e.target.value = '';
-                    }
+            <div key={apt._id} className="border rounded-lg overflow-hidden shadow bg-white dark:bg-gray-800 dark:border-gray-700">
+              <div className="aspect-w-16 aspect-h-9">
+                <img 
+                  src={apt.image} 
+                  alt={apt.title}
+                  className="object-cover w-full h-48"
+                  onError={(e) => {
+                    e.target.src = '/placeholder-apartment.jpg'; // Add a placeholder image
                   }}
                 />
+              </div>
+              <div className="p-4">
+                <h3 className="text-xl font-semibold dark:text-white">{apt.title}</h3>
+                <p className="text-gray-600 dark:text-gray-300">{apt.description}</p>
+                <p className="text-blue-500 dark:text-blue-400 font-semibold">{apt.rent} MATIC/month</p>
+                <p className="text-gray-500 dark:text-gray-400">{apt.location}</p>
+                
+                <div className="mt-4">
+                  <button
+                    onClick={() => handleRentPayment(apt)}
+                    disabled={loading}
+                    className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600 
+                      transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Processing...' : 'Rent Now'}
+                  </button>
+                </div>
+
+                <div className="mt-4">
+                  <h4 className="font-semibold mb-2 dark:text-white">Reviews</h4>
+                  {apt.reviews?.map((review, index) => (
+                    <div key={index} className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      {review}
+                    </div>
+                  ))}
+                  <textarea
+                    className="w-full border rounded p-2 mt-2 dark:bg-gray-700 dark:border-gray-600 
+                      dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Write a review..."
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        submitReview(apt._id, e.target.value);
+                        e.target.value = '';
+                      }
+                    }}
+                  />
+                </div>
               </div>
             </div>
           ))}
@@ -265,8 +357,8 @@ const TenantDashboard = () => {
           )}
         </div>
       )}
-    </div>
-  );
-};
+      </div>
+    );
+  };
 
 export default TenantDashboard;

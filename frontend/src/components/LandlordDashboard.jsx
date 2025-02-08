@@ -1,17 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS, MONITORED_ADDRESSES } from '../config/contracts';
+import { getMaticPrice } from '../utils/price';
 
 const LandlordDashboard = () => {
   const [activeTab, setActiveTab] = useState('apartments');
   const [loading, setLoading] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [account, setAccount] = useState(null);
+  const [balance, setBalance] = useState('0');
+  const [maticPrice, setMaticPrice] = useState(null);
+  const [usdBalance, setUsdBalance] = useState('0');
 
   // Mock data for demonstration
   const apartments = [
-    { id: 1, title: "Luxury Apartment", rent: "0.1", location: "New York", available: true },
-    { id: 2, title: "Cozy Studio", rent: "0.05", location: "Los Angeles", available: false },
+    { 
+      id: 1, 
+      title: "Luxury Apartment", 
+      rent: "0.1", 
+      location: "New York", 
+      available: true,
+      image: "https://your-image-url.com/luxury-apt.jpg" // Add actual image URL
+    },
+    { 
+      id: 2, 
+      title: "Cozy Studio", 
+      rent: "0.05", 
+      location: "Los Angeles", 
+      available: false,
+      image: "https://your-image-url.com/cozy-studio.jpg" // Add actual image URL
+    },
   ];
 
   const tenants = [
@@ -24,6 +42,7 @@ const LandlordDashboard = () => {
       if (window.ethereum) {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         setAccount(accounts[0]);
+        await fetchBalance(accounts[0]);
       }
     };
     fetchAccount();
@@ -34,6 +53,61 @@ const LandlordDashboard = () => {
       fetchTransactions();
     }
   }, [account, activeTab]);
+
+  const fetchBalance = async (address) => {
+    try {
+      if (!window.ethereum) {
+        console.error('MetaMask is not installed');
+        return;
+      }
+
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const balanceWei = await provider.getBalance(address);
+      const balanceEth = ethers.utils.formatEther(balanceWei);
+      const balanceMatic = parseFloat(balanceEth).toFixed(4);
+      setBalance(balanceMatic);
+
+      // Fetch MATIC price and calculate USD value
+      const price = await getMaticPrice();
+      if (price) {
+        setMaticPrice(price);
+        const usdValue = (parseFloat(balanceMatic) * price).toFixed(2);
+        setUsdBalance(usdValue);
+      }
+
+      // Add listener for account changes to update balance
+      window.ethereum.on('accountsChanged', async (accounts) => {
+        if (accounts.length > 0) {
+          const newBalance = await provider.getBalance(accounts[0]);
+          const newBalanceMatic = parseFloat(ethers.utils.formatEther(newBalance)).toFixed(4);
+          setBalance(newBalanceMatic);
+          if (maticPrice) {
+            const newUsdValue = (parseFloat(newBalanceMatic) * maticPrice).toFixed(2);
+            setUsdBalance(newUsdValue);
+          }
+        }
+      });
+
+      // Add listener for chain changes to update balance
+      window.ethereum.on('chainChanged', async () => {
+        const accounts = await provider.listAccounts();
+        if (accounts.length > 0) {
+          const newBalance = await provider.getBalance(accounts[0]);
+          const newBalanceMatic = parseFloat(ethers.utils.formatEther(newBalance)).toFixed(4);
+          setBalance(newBalanceMatic);
+          if (maticPrice) {
+            const newUsdValue = (parseFloat(newBalanceMatic) * maticPrice).toFixed(2);
+            setUsdBalance(newUsdValue);
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Error fetching balance:', error);
+      setBalance('0');
+      setUsdBalance('0');
+    }
+  };
 
   const fetchTransactions = async () => {
     if (!window.ethereum) {
@@ -143,7 +217,18 @@ const LandlordDashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8 dark:text-white">Landlord Dashboard</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold dark:text-white">Landlord Dashboard</h1>
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Wallet Balance</p>
+          <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+            {balance} MATIC
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            ≈ ${usdBalance} USD
+          </p>
+        </div>
+      </div>
       
       <div className="flex space-x-4 mb-8">
         <button
@@ -180,21 +265,33 @@ const LandlordDashboard = () => {
 
       {activeTab === 'apartments' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {apartments.map((apt) => (
-            <div key={apt.id} className="border rounded-lg p-4 shadow bg-white dark:bg-gray-800 dark:border-gray-700">
-              <h3 className="text-xl font-semibold dark:text-white">{apt.title}</h3>
-              <p className="text-blue-500 dark:text-blue-400 font-semibold">{apt.rent} ETH/month</p>
-              <p className="text-gray-500 dark:text-gray-400">{apt.location}</p>
-              <p className={`${
-                apt.available 
-                  ? 'text-green-500 dark:text-green-400' 
-                  : 'text-red-500 dark:text-red-400'
-              }`}>
-                {apt.available ? 'Available' : 'Occupied'}
-              </p>
-            </div>
-          ))}
-        </div>
+        {apartments.map((apt) => (
+            <div key={apt.id} className="border rounded-lg overflow-hidden shadow bg-white dark:bg-gray-800 dark:border-gray-700">
+              <div className="aspect-w-16 aspect-h-9">
+                <img 
+                  src={apt.image} 
+                  alt={apt.title}
+                  className="object-cover w-full h-48"
+                  onError={(e) => {
+                    e.target.src = '/placeholder-apartment.jpg'; // Add a placeholder image
+                  }}
+                />
+              </div>
+              <div className="p-4">
+                <h3 className="text-xl font-semibold dark:text-white">{apt.title}</h3>
+                <p className="text-blue-500 dark:text-blue-400 font-semibold">{apt.rent} MATIC/month</p>
+                <p className="text-gray-500 dark:text-gray-400">{apt.location}</p>
+                <p className={`${
+                  apt.available 
+                    ? 'text-green-500 dark:text-green-400' 
+                    : 'text-red-500 dark:text-red-400'
+                }`}>
+                  {apt.available ? 'Available' : 'Occupied'}
+                </p>
+              </div>
+          </div>
+        ))}
+      </div>
       )}
 
       {activeTab === 'tenants' && (
