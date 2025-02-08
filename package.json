@@ -4,6 +4,10 @@
     "thirdweb": "^5.88.1"
   },
   "devDependencies": {
+<<<<<<< HEAD
+=======
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+>>>>>>> f92de302e4a6008485a625caec2416bae88d6a81
     "hardhat": "^2.22.18"
   }
 }
