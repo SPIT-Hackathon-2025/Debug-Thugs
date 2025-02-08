@@ -1,4 +1,4 @@
-// Stores rental agreements securely on IPFS or another decentralized storage network.
+   // Stores rental agreements securely on IPFS or another decentralized storage network.
 
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;

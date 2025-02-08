@@ -2,5 +2,8 @@
   "dependencies": {
     "dotenv": "^16.4.7",
     "thirdweb": "^5.88.1"
+  },
+  "devDependencies": {
+    "hardhat": "^2.22.18"
   }
 }
