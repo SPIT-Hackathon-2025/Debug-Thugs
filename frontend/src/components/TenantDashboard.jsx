@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { CONTRACT_ADDRESSES, CONTRACT_ABIS } from '../config/contracts';
+import { CONTRACT_ADDRESSES, CONTRACT_ABIS, MONITORED_ADDRESSES } from '../config/contracts';
 
 const TenantDashboard = () => {
   const [apartments, setApartments] = useState([]);
@@ -138,16 +138,26 @@ const TenantDashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8 dark:text-white">Tenant Dashboard</h1>
+
       <div className="flex space-x-4 mb-8">
         <button
           onClick={() => setActiveTab('available')}
-          className={`px-4 py-2 rounded ${activeTab === 'available' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          className={`px-4 py-2 rounded transition-colors ${
+            activeTab === 'available'
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+          }`}
         >
           Available Apartments
         </button>
         <button
           onClick={() => setActiveTab('transactions')}
-          className={`px-4 py-2 rounded ${activeTab === 'transactions' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          className={`px-4 py-2 rounded transition-colors ${
+            activeTab === 'transactions'
+              ? 'bg-blue-500 text-white'
+              : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+          }`}
         >
           My Transactions
         </button>
@@ -156,32 +166,34 @@ const TenantDashboard = () => {
       {activeTab === 'available' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {apartments.filter(apt => apt.available).map((apt) => (
-            <div key={apt._id} className="border rounded-lg p-4 shadow">
+            <div key={apt._id} className="border rounded-lg p-4 shadow bg-white dark:bg-gray-800 dark:border-gray-700">
               <img src={apt.image} alt={apt.title} className="w-full h-48 object-cover rounded mb-4" />
-              <h3 className="text-xl font-semibold">{apt.title}</h3>
-              <p className="text-gray-600">{apt.description}</p>
-              <p className="text-blue-500 font-semibold">{apt.rent} ETH/month</p>
-              <p className="text-gray-500">{apt.location}</p>
+              <h3 className="text-xl font-semibold dark:text-white">{apt.title}</h3>
+              <p className="text-gray-600 dark:text-gray-300">{apt.description}</p>
+              <p className="text-blue-500 dark:text-blue-400 font-semibold">{apt.rent} ETH/month</p>
+              <p className="text-gray-500 dark:text-gray-400">{apt.location}</p>
               
               <div className="mt-4">
                 <button
                   onClick={() => handleRentPayment(apt)}
                   disabled={loading}
-                  className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600 disabled:opacity-50"
+                  className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600 
+                    transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Processing...' : 'Rent Now'}
                 </button>
               </div>
 
               <div className="mt-4">
-                <h4 className="font-semibold mb-2">Reviews</h4>
+                <h4 className="font-semibold mb-2 dark:text-white">Reviews</h4>
                 {apt.reviews?.map((review, index) => (
-                  <div key={index} className="text-sm text-gray-600 mb-2">
+                  <div key={index} className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                     {review}
                   </div>
                 ))}
                 <textarea
-                  className="w-full border rounded p-2 mt-2"
+                  className="w-full border rounded p-2 mt-2 dark:bg-gray-700 dark:border-gray-600 
+                    dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Write a review..."
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
@@ -199,23 +211,54 @@ const TenantDashboard = () => {
       {activeTab === 'transactions' && (
         <div className="space-y-4">
           {loading ? (
-            <div className="text-center py-4">Loading transactions...</div>
+            <div className="text-center py-4 text-gray-700 dark:text-gray-300">Loading transactions...</div>
           ) : transactions.length === 0 ? (
-            <div className="text-center py-4">No transactions found</div>
+            <div className="text-center py-4 text-gray-700 dark:text-gray-300">No transactions found</div>
           ) : (
             transactions.map((tx, index) => (
-              <div key={index} className="border rounded p-4 hover:shadow-md transition-shadow">
+              <div key={index} className="border dark:border-gray-700 rounded p-4 hover:shadow-md 
+                transition-shadow bg-white dark:bg-gray-800">
                 <div className="grid grid-cols-2 gap-2">
-                  <p><span className="font-semibold">Hash:</span> {tx.hash}</p>
-                  <p><span className="font-semibold">Amount:</span> {tx.value} ETH</p>
-                  <p><span className="font-semibold">From:</span> {tx.from}</p>
-                  <p><span className="font-semibold">To:</span> {tx.to}</p>
-                  <p><span className="font-semibold">Status:</span> 
-                    <span className={tx.status === 'Success' ? 'text-green-500' : 'text-red-500'}>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">Contract:</span> {tx.contractName}
+                  </p>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">Hash:</span> 
+                    <a 
+                      href={`https://mumbai.polygonscan.com/tx/${tx.hash}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:text-blue-600 dark:text-blue-400 
+                        dark:hover:text-blue-300 ml-1"
+                    >
+                      {tx.hash.slice(0, 6)}...{tx.hash.slice(-4)}
+                    </a>
+                  </p>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">Amount:</span> {tx.value} MATIC
+                  </p>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">Gas Used:</span> {tx.gasUsed}
+                  </p>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">From:</span> {tx.from.slice(0, 6)}...{tx.from.slice(-4)}
+                  </p>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">To:</span> {tx.to.slice(0, 6)}...{tx.to.slice(-4)}
+                  </p>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">Status:</span> 
+                    <span className={`ml-1 ${
+                      tx.status === 'Success' 
+                        ? 'text-green-500 dark:text-green-400' 
+                        : 'text-red-500 dark:text-red-400'
+                    }`}>
                       {tx.status}
                     </span>
                   </p>
-                  <p><span className="font-semibold">Date:</span> {tx.timestamp.toLocaleString()}</p>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">Date:</span> {tx.timestamp.toLocaleString()}
+                  </p>
                 </div>
               </div>
             ))

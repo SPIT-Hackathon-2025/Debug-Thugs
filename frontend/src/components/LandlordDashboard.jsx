@@ -143,24 +143,36 @@ const LandlordDashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Landlord Dashboard</h1>
+      <h1 className="text-3xl font-bold mb-8 dark:text-white">Landlord Dashboard</h1>
       
       <div className="flex space-x-4 mb-8">
         <button
           onClick={() => setActiveTab('apartments')}
-          className={`px-4 py-2 rounded ${activeTab === 'apartments' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          className={`px-4 py-2 rounded transition-colors ${
+            activeTab === 'apartments' 
+              ? 'bg-blue-500 text-white' 
+              : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+          }`}
         >
           My Apartments
         </button>
         <button
           onClick={() => setActiveTab('tenants')}
-          className={`px-4 py-2 rounded ${activeTab === 'tenants' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          className={`px-4 py-2 rounded transition-colors ${
+            activeTab === 'tenants' 
+              ? 'bg-blue-500 text-white' 
+              : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+          }`}
         >
           Tenants
         </button>
         <button
           onClick={() => setActiveTab('transactions')}
-          className={`px-4 py-2 rounded ${activeTab === 'transactions' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+          className={`px-4 py-2 rounded transition-colors ${
+            activeTab === 'transactions' 
+              ? 'bg-blue-500 text-white' 
+              : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+          }`}
         >
           Transactions
         </button>
@@ -169,11 +181,15 @@ const LandlordDashboard = () => {
       {activeTab === 'apartments' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {apartments.map((apt) => (
-            <div key={apt.id} className="border rounded-lg p-4 shadow">
-              <h3 className="text-xl font-semibold">{apt.title}</h3>
-              <p className="text-blue-500 font-semibold">{apt.rent} ETH/month</p>
-              <p className="text-gray-500">{apt.location}</p>
-              <p className={`${apt.available ? 'text-green-500' : 'text-red-500'}`}>
+            <div key={apt.id} className="border rounded-lg p-4 shadow bg-white dark:bg-gray-800 dark:border-gray-700">
+              <h3 className="text-xl font-semibold dark:text-white">{apt.title}</h3>
+              <p className="text-blue-500 dark:text-blue-400 font-semibold">{apt.rent} ETH/month</p>
+              <p className="text-gray-500 dark:text-gray-400">{apt.location}</p>
+              <p className={`${
+                apt.available 
+                  ? 'text-green-500 dark:text-green-400' 
+                  : 'text-red-500 dark:text-red-400'
+              }`}>
                 {apt.available ? 'Available' : 'Occupied'}
               </p>
             </div>
@@ -183,25 +199,25 @@ const LandlordDashboard = () => {
 
       {activeTab === 'tenants' && (
         <div className="overflow-x-auto">
-          <table className="min-w-full bg-white">
+          <table className="min-w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg">
             <thead>
-              <tr>
-                <th className="px-6 py-3 border-b">Address</th>
-                <th className="px-6 py-3 border-b">Apartment</th>
-                <th className="px-6 py-3 border-b">Status</th>
-                <th className="px-6 py-3 border-b">Actions</th>
+              <tr className="bg-gray-50 dark:bg-gray-700">
+                <th className="px-6 py-3 border-b dark:border-gray-600 text-left text-gray-700 dark:text-gray-300">Address</th>
+                <th className="px-6 py-3 border-b dark:border-gray-600 text-left text-gray-700 dark:text-gray-300">Apartment</th>
+                <th className="px-6 py-3 border-b dark:border-gray-600 text-left text-gray-700 dark:text-gray-300">Status</th>
+                <th className="px-6 py-3 border-b dark:border-gray-600 text-left text-gray-700 dark:text-gray-300">Actions</th>
               </tr>
             </thead>
             <tbody>
               {tenants.map((tenant, index) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 border-b">{tenant.address}</td>
-                  <td className="px-6 py-4 border-b">{tenant.apartment}</td>
-                  <td className="px-6 py-4 border-b">{tenant.status}</td>
-                  <td className="px-6 py-4 border-b">
+                <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="px-6 py-4 border-b dark:border-gray-600 text-gray-800 dark:text-gray-300">{tenant.address}</td>
+                  <td className="px-6 py-4 border-b dark:border-gray-600 text-gray-800 dark:text-gray-300">{tenant.apartment}</td>
+                  <td className="px-6 py-4 border-b dark:border-gray-600 text-gray-800 dark:text-gray-300">{tenant.status}</td>
+                  <td className="px-6 py-4 border-b dark:border-gray-600">
                     <button
                       onClick={() => enforceContract(tenant.address)}
-                      className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                      className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
                     >
                       Enforce Contract
                     </button>
@@ -216,34 +232,52 @@ const LandlordDashboard = () => {
       {activeTab === 'transactions' && (
         <div className="space-y-4">
           {loading ? (
-            <div className="text-center py-4">Loading transactions...</div>
+            <div className="text-center py-4 text-gray-700 dark:text-gray-300">Loading transactions...</div>
           ) : transactions.length === 0 ? (
-            <div className="text-center py-4">No transactions found</div>
+            <div className="text-center py-4 text-gray-700 dark:text-gray-300">No transactions found</div>
           ) : (
             transactions.map((tx, index) => (
-              <div key={index} className="border rounded p-4 hover:shadow-md transition-shadow dark:bg-gray-800">
+              <div key={index} className="border dark:border-gray-700 rounded p-4 hover:shadow-md transition-shadow bg-white dark:bg-gray-800">
                 <div className="grid grid-cols-2 gap-2">
-                  <p><span className="font-semibold">Contract:</span> {tx.contractName}</p>
-                  <p><span className="font-semibold">Hash:</span> 
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">Contract:</span> {tx.contractName}
+                  </p>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">Hash:</span> 
                     <a 
                       href={`https://mumbai.polygonscan.com/tx/${tx.hash}`} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="text-blue-500 hover:text-blue-600"
+                      className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 ml-1"
                     >
                       {tx.hash.slice(0, 6)}...{tx.hash.slice(-4)}
                     </a>
                   </p>
-                  <p><span className="font-semibold">Amount:</span> {tx.value} MATIC</p>
-                  <p><span className="font-semibold">Gas Used:</span> {tx.gasUsed}</p>
-                  <p><span className="font-semibold">From:</span> {tx.from.slice(0, 6)}...{tx.from.slice(-4)}</p>
-                  <p><span className="font-semibold">To:</span> {tx.to.slice(0, 6)}...{tx.to.slice(-4)}</p>
-                  <p><span className="font-semibold">Status:</span> 
-                    <span className={tx.status === 'Success' ? 'text-green-500' : 'text-red-500'}>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">Amount:</span> {tx.value} MATIC
+                  </p>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">Gas Used:</span> {tx.gasUsed}
+                  </p>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">From:</span> {tx.from.slice(0, 6)}...{tx.from.slice(-4)}
+                  </p>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">To:</span> {tx.to.slice(0, 6)}...{tx.to.slice(-4)}
+                  </p>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">Status:</span> 
+                    <span className={`ml-1 ${
+                      tx.status === 'Success' 
+                        ? 'text-green-500 dark:text-green-400' 
+                        : 'text-red-500 dark:text-red-400'
+                    }`}>
                       {tx.status}
                     </span>
                   </p>
-                  <p><span className="font-semibold">Date:</span> {tx.timestamp.toLocaleString()}</p>
+                  <p className="text-gray-800 dark:text-gray-200">
+                    <span className="font-semibold">Date:</span> {tx.timestamp.toLocaleString()}
+                  </p>
                 </div>
               </div>
             ))
