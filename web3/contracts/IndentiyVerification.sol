@@ -1,3 +1,5 @@
+// Verifies the identities of landlords and tenants to prevent fraud.
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 

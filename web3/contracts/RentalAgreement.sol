@@ -1,3 +1,5 @@
+// Manages the creation, storage, and termination of rental agreements on the blockchain.
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 

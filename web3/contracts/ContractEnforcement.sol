@@ -1,5 +1,4 @@
-// Ensures compliance and enforces penalties.
-
+// Ensures compliance with rental agreements by enforcing penalties for violations.
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
