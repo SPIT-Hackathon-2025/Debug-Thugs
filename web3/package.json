@@ -2,7 +2,7 @@
   "name": "hardhat-javascript-starter",
   "scripts": {
     "build": "npx thirdweb@latest detect",
-    "deploy": "npx thirdweb@latest deploy",
+    "deploy": "hardhat run scripts/deploy.js --network polygonMumbai",
     "publish": "npx thirdweb@latest publish"
   },
   "devDependencies": {
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@thirdweb-dev/contracts": "^3.8.0",
+    "thirdweb": "^5.88.1",
     "zksync-ethers": "^5.7.0"
   }
 }
