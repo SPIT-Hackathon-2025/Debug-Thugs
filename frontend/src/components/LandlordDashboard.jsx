@@ -45,6 +45,14 @@ const LandlordDashboard = () => {
       available: false,
       image: "https://imgs.search.brave.com/cOlHqns63MCPrw9YJ2w0HsVLFWD1l9-H5gLHfr4ehRk/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/dGhlc3BydWNlLmNv/bS90aG1iL3l0TkRa/OXNITGllTUJMTGp5/VjVSN0gxYTFLUT0v/MTUwMHgwL2ZpbHRl/cnM6bm9fdXBzY2Fs/ZSgpOm1heF9ieXRl/cygxNTAwMDApOnN0/cmlwX2ljYygpLzEz/LURvdWJsZS1EdXR5/LUJlZC1EcmFtYS01/ODc2ODA3YzVmOWI1/ODRkYjNhYTUyNGIu/anBn" // Add actual image URL
     },
+    { 
+      id: 3, 
+      title: "Antilia", 
+      rent: "0.1", 
+      location: "Australia", 
+      available: true,
+      image: "https://imgs.search.brave.com/_9L_1yLOZgd_pQA_MObqyiQiwH8Map7vPRZiZbK2lEo/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9vbmVs/aWdodGtjLmNvbS93/cC1jb250ZW50L3Vw/bG9hZHMvMjAxOS8x/Mi82LWJ1aWxkaW5n/LWFtZW5pdGllcy1i/Zy01LmpwZw" // Add actual image URL
+    },
   ];
 
   const tenants = [
