@@ -50,7 +50,7 @@ const AddApartmentForm = ({ onClose }) => {
                 }
             });
 
-            const response = await fetch('/api/apartments/create', {
+            const response = await fetch('/apartments/create', {
                 method: 'POST',
                 body: formDataToSend
             });

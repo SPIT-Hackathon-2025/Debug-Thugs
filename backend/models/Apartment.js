@@ -1,9 +1,8 @@
 const mongoose = require("mongoose");
 
 const reviewSchema = new mongoose.Schema({
-    tenant: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+    tenantAddress: {
+        type: String,
         required: true
     },
     rating: {
@@ -16,16 +15,15 @@ const reviewSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    createdAt: {
+    timestamp: {
         type: Date,
         default: Date.now
     }
 });
 
 const apartmentSchema = new mongoose.Schema({
-    landlord: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+    landlordAddress: {
+        type: String,
         required: true
     },
     title: {
@@ -40,42 +38,32 @@ const apartmentSchema = new mongoose.Schema({
         address: String,
         city: String,
         state: String,
-        zipCode: String,
-        coordinates: {
-            lat: Number,
-            lng: Number
-        }
+        zipCode: String
     },
-    price: {
-        amount: Number,
-        currency: {
-            type: String,
-            default: 'ETH'
-        }
+    rent: {
+        type: Number,
+        required: true
+    },
+    depositAmount: {
+        type: Number,
+        required: true
     },
     images: [{
-        type: String // GridFS file IDs
+        type: String // Base64 encoded images or URLs
     }],
-    availability: {
-        isAvailable: {
-            type: Boolean,
-            default: true
-        },
-        availableFrom: Date,
-        availableTo: Date
+    available: {
+        type: Boolean,
+        default: true
     },
-    propertyType: String,
-    amenities: [String],
-    rules: [String],
-    reviews: [reviewSchema],
-    contractAddress: String, // Smart contract address
-    depositAmount: Number,
-    rentDueDate: Number, // Day of month
     currentTenant: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+        address: String,
+        rentDueDate: Number, // Day of month
+        leaseStart: Date,
+        leaseEnd: Date
     },
-    rentalAgreementHash: String // IPFS hash of rental agreement
+    reviews: [reviewSchema],
+    amenities: [String],
+    contractAddress: String
 }, { timestamps: true });
 
 module.exports = mongoose.model("Apartment", apartmentSchema);

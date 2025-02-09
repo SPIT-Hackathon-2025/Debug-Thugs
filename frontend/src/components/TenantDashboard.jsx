@@ -12,6 +12,9 @@ const TenantDashboard = () => {
   const [balance, setBalance] = useState('0');
   const [maticPrice, setMaticPrice] = useState(null);
   const [usdBalance, setUsdBalance] = useState('0');
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [selectedApartment, setSelectedApartment] = useState(null);
+  const [review, setReview] = useState({ rating: 5, comment: '' });
 
   const contractAddress = CONTRACT_ADDRESSES.PaymentDeposit;
 
@@ -45,7 +48,7 @@ const TenantDashboard = () => {
 
   const fetchApartments = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/apartments');
+      const response = await fetch('http://localhost:5000/apartments');
       const data = await response.json();
       setApartments(data);
     } catch (error) {
@@ -136,18 +139,49 @@ const TenantDashboard = () => {
     }
   };
 
-  const submitReview = async (apartmentId, review) => {
+  const setupAutoDebit = async (apartment) => {
     try {
-      await fetch(`http://localhost:5000/api/apartments/${apartmentId}/review`, {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const contract = new ethers.Contract(
+        CONTRACT_ADDRESSES.PaymentDeposit,
+        CONTRACT_ABIS.PaymentDeposit,
+        signer
+      );
+
+      const tx = await contract.approveAutoDebit(
+        apartment._id,
+        ethers.utils.parseEther(apartment.rent.toString())
+      );
+      await tx.wait();
+      alert('Auto-debit setup successful!');
+    } catch (error) {
+      console.error('Error setting up auto-debit:', error);
+      alert('Failed to setup auto-debit');
+    }
+  };
+
+  const submitReview = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`http://localhost:5000/apartments/${selectedApartment._id}/reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ review }),
+        body: JSON.stringify({
+          ...review,
+          tenantAddress: account
+        }),
       });
+
+      if (!response.ok) throw new Error('Failed to submit review');
+      
+      setShowReviewForm(false);
       fetchApartments();
     } catch (error) {
       console.error('Error submitting review:', error);
+      alert('Failed to submit review');
     }
   };
 
@@ -206,7 +240,7 @@ const TenantDashboard = () => {
     }
   };
 
-    return (
+  return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold dark:text-white">Tenant Dashboard</h1>
@@ -288,7 +322,7 @@ const TenantDashboard = () => {
                     placeholder="Write a review..."
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') {
-                        submitReview(apt._id, e.target.value);
+                        submitReview(e);
                         e.target.value = '';
                       }
                     }}
@@ -357,8 +391,55 @@ const TenantDashboard = () => {
           )}
         </div>
       )}
-      </div>
-    );
-  };
+
+      {showReviewForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg max-w-md w-full">
+            <h2 className="text-2xl font-bold mb-4">Write a Review</h2>
+            <form onSubmit={submitReview} className="space-y-4">
+              <div>
+                <label className="block mb-2">Rating</label>
+                <select
+                  value={review.rating}
+                  onChange={(e) => setReview({...review, rating: parseInt(e.target.value)})}
+                  className="w-full p-2 border rounded"
+                >
+                  {[1,2,3,4,5].map(num => (
+                    <option key={num} value={num}>{num} Stars</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block mb-2">Comment</label>
+                <textarea
+                  value={review.comment}
+                  onChange={(e) => setReview({...review, comment: e.target.value})}
+                  className="w-full p-2 border rounded"
+                  rows={4}
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-4">
+                <button
+                  type="button"
+                  onClick={() => setShowReviewForm(false)}
+                  className="px-4 py-2 border rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-500 text-white rounded"
+                >
+                  Submit Review
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default TenantDashboard;

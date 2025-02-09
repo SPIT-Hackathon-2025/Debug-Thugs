@@ -144,7 +144,7 @@ exports.searchApartments = async (req, res) => {
         // Transform the response to include image URLs
         const apartmentsWithImageUrls = apartments.map(apt => ({
             ...apt.toObject(),
-            images: apt.images.map(imageId => `/api/apartments/image/${imageId}`)
+            images: apt.images.map(imageId => `/apartments/image/${imageId}`)
         }));
 
         res.json(apartmentsWithImageUrls);

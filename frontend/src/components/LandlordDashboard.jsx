@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { CONTRACT_ADDRESSES, CONTRACT_ABIS, MONITORED_ADDRESSES } from '../config/contracts';
 import { getMaticPrice } from '../utils/price';
+import { useDropzone } from 'react-dropzone';
+import { FaUpload, FaSpinner } from 'react-icons/fa';
 
 const LandlordDashboard = () => {
   const [activeTab, setActiveTab] = useState('apartments');
@@ -10,7 +12,20 @@ const LandlordDashboard = () => {
   const [account, setAccount] = useState(null);
   const [balance, setBalance] = useState('0');
   const [maticPrice, setMaticPrice] = useState(null);
-  const [usdBalance, setUsdBalance] = useState('0');
+  const [usdBalance, setUsdBalance] = useState('0.00');
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newApartment, setNewApartment] = useState({
+    title: '',
+    description: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    rent: '',
+    depositAmount: '',
+    amenities: '',
+    images: []
+  });
 
   // Mock data for demonstration
   const apartments = [
@@ -53,6 +68,17 @@ const LandlordDashboard = () => {
       fetchTransactions();
     }
   }, [account, activeTab]);
+
+  useEffect(() => {
+    if (account) {
+      fetchBalance(account);
+      const interval = setInterval(() => {
+        fetchBalance(account);
+      }, 30000); // Update every 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [account]);
 
   const fetchBalance = async (address) => {
     try {
@@ -215,18 +241,107 @@ const LandlordDashboard = () => {
     }
   };
 
+  const onDrop = useCallback((acceptedFiles) => {
+    setNewApartment(prev => ({
+      ...prev,
+      images: [...prev.images, ...acceptedFiles]
+    }));
+  }, []);
+
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.gif']
+    },
+    maxSize: 5242880 // 5MB
+  });
+
+  const handleAddApartment = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const formData = new FormData();
+      
+      // Convert images to files if they're base64
+      const imageFiles = newApartment.images.map((image, index) => {
+        if (image instanceof File) return image;
+        
+        // Convert base64 to file
+        const byteString = atob(image.split(',')[1]);
+        const mimeString = image.split(',')[0].split(':')[1].split(';')[0];
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+        }
+        const blob = new Blob([ab], { type: mimeString });
+        return new File([blob], `image${index}.${mimeString.split('/')[1]}`, { type: mimeString });
+      });
+
+      // Append each image to formData
+      imageFiles.forEach(file => {
+        formData.append('images', file);
+      });
+
+      // Add other apartment data
+      const apartmentData = {
+        landlordAddress: account,
+        title: newApartment.title,
+        description: newApartment.description,
+        location: {
+          address: newApartment.address
+        },
+        rent: parseFloat(newApartment.rent),
+        depositAmount: parseFloat(newApartment.depositAmount),
+        amenities: newApartment.amenities || [],
+        available: true
+      };
+
+      formData.append('apartmentData', JSON.stringify(apartmentData));
+
+      const response = await fetch('http://localhost:5000/apartments', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add apartment');
+      }
+      
+      const data = await response.json();
+      alert('Apartment added successfully!');
+      setShowAddForm(false);
+      fetchApartments();
+    } catch (error) {
+      console.error('Error adding apartment:', error);
+      alert(error.message || 'Error adding apartment');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold dark:text-white">Landlord Dashboard</h1>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
-          <p className="text-sm text-gray-600 dark:text-gray-400">Wallet Balance</p>
-          <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
-            {balance} MATIC
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            ≈ ${usdBalance} USD
-          </p>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Add New Apartment
+          </button>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
+            <p className="text-sm text-gray-600 dark:text-gray-400">Wallet Balance</p>
+            <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+              {balance} MATIC
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              ≈ ${usdBalance} USD
+            </p>
+          </div>
         </div>
       </div>
       
@@ -379,6 +494,133 @@ const LandlordDashboard = () => {
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {showAddForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg max-w-2xl w-full max-h-90vh overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold dark:text-white">Add New Apartment</h2>
+              <button 
+                onClick={() => setShowAddForm(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                ×
+              </button>
+            </div>
+            
+            <form onSubmit={handleAddApartment} className="space-y-4">
+              {/* Title */}
+              <input
+                type="text"
+                placeholder="Title"
+                value={newApartment.title}
+                onChange={(e) => setNewApartment({...newApartment, title: e.target.value})}
+                className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                required
+              />
+
+              {/* Single Address Field */}
+              <input
+                type="text"
+                placeholder="Full Address"
+                value={newApartment.address}
+                onChange={(e) => setNewApartment({...newApartment, address: e.target.value})}
+                className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                required
+              />
+
+              {/* Rent and Deposit */}
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Monthly Rent (MATIC)"
+                  value={newApartment.rent}
+                  onChange={(e) => setNewApartment({...newApartment, rent: e.target.value})}
+                  className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  required
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Security Deposit (MATIC)"
+                  value={newApartment.depositAmount}
+                  onChange={(e) => setNewApartment({...newApartment, depositAmount: e.target.value})}
+                  className="p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  required
+                />
+              </div>
+
+              {/* Image Upload */}
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6">
+                <div {...getRootProps()} className="cursor-pointer">
+                  <input {...getInputProps()} />
+                  <div className="text-center">
+                    <FaUpload className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                      Drag and drop images here, or click to select files
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      PNG, JPG, GIF up to 5MB
+                    </p>
+                  </div>
+                </div>
+                {newApartment.images.length > 0 && (
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    {newApartment.images.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={typeof image === 'string' ? image : URL.createObjectURL(image)}
+                          alt={`Preview ${index + 1}`}
+                          className="h-24 w-full object-cover rounded"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewApartment(prev => ({
+                              ...prev,
+                              images: prev.images.filter((_, i) => i !== index)
+                            }));
+                          }}
+                          className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 m-1 hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
+              <textarea
+                placeholder="Description"
+                value={newApartment.description}
+                onChange={(e) => setNewApartment({...newApartment, description: e.target.value})}
+                className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                rows="4"
+                required
+              />
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center">
+                    <FaSpinner className="animate-spin mr-2" />
+                    Adding...
+                  </span>
+                ) : (
+                  'Add Apartment'
+                )}
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>

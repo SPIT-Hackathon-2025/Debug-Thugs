@@ -22,7 +22,7 @@ const SearchApartment = () => {
         amenities: searchParams.amenities.join(',')
       }).toString();
 
-      const response = await fetch(`/api/apartments/search?${queryString}`);
+      const response = await fetch(`/apartments/search?${queryString}`);
       const data = await response.json();
       setApartments(data);
     } catch (error) {

@@ -10,7 +10,7 @@ const ReviewForm = ({ apartmentId }) => {
         setLoading(true);
 
         try {
-            const response = await fetch(`/api/apartments/${apartmentId}/reviews`, {
+            const response = await fetch(`/apartments/${apartmentId}/reviews`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

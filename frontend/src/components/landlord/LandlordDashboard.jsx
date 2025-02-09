@@ -10,7 +10,7 @@ const LandlordDashboard = () => {
     useEffect(() => {
         const fetchApartments = async () => {
             try {
-                const response = await fetch('/api/apartments');
+                const response = await fetch('/apartments');
                 const data = await response.json();
                 setApartments(data);
             } catch (error) {
@@ -40,7 +40,7 @@ const LandlordDashboard = () => {
                 {apartments.map(apartment => (
                     <div key={apartment._id} className="border rounded-lg overflow-hidden shadow-lg">
                         <img 
-                            src={`/api/apartments/image/${apartment.images[0]}`} 
+                            src={`/apartments/image/${apartment.images[0]}`} 
                             alt={apartment.title} 
                             className="w-full h-48 object-cover"
                         />

@@ -15,8 +15,8 @@
 // //   .catch((err) => console.error("Database connection error:", err));
 
 // // Routes
-// // app.use("/api/users", require("./routes/userRoutes"));
-// // app.use("/api/apartments", require("./routes/apartmentRoutes"));
+// // app.use("/users", require("./routes/userRoutes"));
+// // app.use("/apartments", require("./routes/apartmentRoutes"));
 
 // const PORT = process.env.PORT || 5000;
 // app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
@@ -50,11 +50,11 @@ const startServer = async () => {
         app.use(cors());
 
         // Routes
-        app.use("/api/auth", require("./routes/authRoutes"));
-        app.use("/api/apartments", require("./routes/apartmentRoutes"));
-        app.use("/api/images", require("./routes/imageRoutes"));
-        app.use('/api/users', require('./routes/userRoutes'));
-        app.use('/api/rentals', require('./routes/rentalRoutes'));
+        app.use("/auth", require("./routes/authRoutes"));
+        app.use("/apartments", require("./routes/apartmentRoutes"));
+        app.use("/images", require("./routes/imageRoutes"));
+        app.use('/users', require('./routes/userRoutes'));
+        app.use('/rentals', require('./routes/rentalRoutes'));
 
         const PORT = process.env.PORT || 5000;
         app.listen(PORT, () => {
