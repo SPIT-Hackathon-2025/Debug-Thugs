@@ -26,34 +26,8 @@ const LandlordDashboard = () => {
     amenities: '',
     images: []
   });
-
-  // Mock data for demonstration
-  const apartments = [
-    { 
-      id: 1, 
-      title: "Luxury Apartment", 
-      rent: "0.1", 
-      location: "New York", 
-      available: true,
-      image: "https://imgs.search.brave.com/CIV_jb0lU2Hk9jyM_geRheWsbU61AoXpMeCJREIoL00/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvMTI5/MTc5NjYwL3Bob3Rv/L2x1eHVyaW91cy1h/cGFydG1lbnQtaW4t/dGhlLW5pZ2h0Lmpw/Zz9zPTYxMng2MTIm/dz0wJms9MjAmYz1J/Nmw5TU1pMnRwMGd2/ODlIQ2ZZaUVIZXFD/SGpIUUdmcFV3ajNf/QkJzZmxFPQ" // Add actual image URL
-    },
-    { 
-      id: 2, 
-      title: "Cozy Studio", 
-      rent: "0.05", 
-      location: "Los Angeles", 
-      available: false,
-      image: "https://imgs.search.brave.com/cOlHqns63MCPrw9YJ2w0HsVLFWD1l9-H5gLHfr4ehRk/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/dGhlc3BydWNlLmNv/bS90aG1iL3l0TkRa/OXNITGllTUJMTGp5/VjVSN0gxYTFLUT0v/MTUwMHgwL2ZpbHRl/cnM6bm9fdXBzY2Fs/ZSgpOm1heF9ieXRl/cygxNTAwMDApOnN0/cmlwX2ljYygpLzEz/LURvdWJsZS1EdXR5/LUJlZC1EcmFtYS01/ODc2ODA3YzVmOWI1/ODRkYjNhYTUyNGIu/anBn" // Add actual image URL
-    },
-    { 
-      id: 3, 
-      title: "Antilia", 
-      rent: "0.1", 
-      location: "Australia", 
-      available: true,
-      image: "https://imgs.search.brave.com/_9L_1yLOZgd_pQA_MObqyiQiwH8Map7vPRZiZbK2lEo/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9vbmVs/aWdodGtjLmNvbS93/cC1jb250ZW50L3Vw/bG9hZHMvMjAxOS8x/Mi82LWJ1aWxkaW5n/LWFtZW5pdGllcy1i/Zy01LmpwZw" // Add actual image URL
-    },
-  ];
+  const [apartments, setApartments] = useState([]);
+  const [fetchError, setFetchError] = useState(null);
 
   const tenants = [
     { address: "0x1234...5678", apartment: "Luxury Apartment", status: "Active" },
@@ -264,63 +238,84 @@ const LandlordDashboard = () => {
     maxSize: 5242880 // 5MB
   });
 
+  const fetchApartments = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5000/api/apartments');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch apartments');
+      }
+      
+      const data = await response.json();
+      setApartments(data);
+      setFetchError(null);
+    } catch (error) {
+      console.error('Error fetching apartments:', error);
+      setFetchError('Failed to load apartments');
+      setApartments([]); // Clear apartments on error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchApartments();
+  }, []);
+
   const handleAddApartment = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       const formData = new FormData();
-      
-      // Convert images to files if they're base64
-      const imageFiles = newApartment.images.map((image, index) => {
-        if (image instanceof File) return image;
-        
-        // Convert base64 to file
-        const byteString = atob(image.split(',')[1]);
-        const mimeString = image.split(',')[0].split(':')[1].split(';')[0];
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++) {
-          ia[i] = byteString.charCodeAt(i);
-        }
-        const blob = new Blob([ab], { type: mimeString });
-        return new File([blob], `image${index}.${mimeString.split('/')[1]}`, { type: mimeString });
-      });
+      formData.append('title', newApartment.title);
+      formData.append('description', newApartment.description);
+      formData.append('location', newApartment.address);
+      formData.append('price', newApartment.rent);
+      formData.append('landlord', account);
 
-      // Append each image to formData
-      imageFiles.forEach(file => {
-        formData.append('images', file);
-      });
+      // Append only the first image if it exists
+      if (newApartment.images && newApartment.images.length > 0) {
+        formData.append('image', newApartment.images[0]);
+      }
 
-      // Add other apartment data
-      const apartmentData = {
-        landlordAddress: account,
+      console.log('Sending apartment data:', {
         title: newApartment.title,
         description: newApartment.description,
-        location: {
-          address: newApartment.address
-        },
-        rent: parseFloat(newApartment.rent),
-        depositAmount: parseFloat(newApartment.depositAmount),
-        amenities: newApartment.amenities || [],
-        available: true
-      };
+        location: newApartment.address,
+        price: newApartment.rent,
+        landlord: account
+      });
 
-      formData.append('apartmentData', JSON.stringify(apartmentData));
-
-      const response = await fetch('http://localhost:5000/apartments', {
+      const response = await fetch('http://localhost:5000/api/apartments/create', {
         method: 'POST',
-        body: formData,
+        body: formData
       });
 
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to add apartment');
       }
-      
+
       const data = await response.json();
+      console.log('Apartment added successfully:', data);
+      
       alert('Apartment added successfully!');
       setShowAddForm(false);
+      
+      // Clear form
+      setNewApartment({
+        title: '',
+        description: '',
+        address: '',
+        rent: '',
+        depositAmount: '',
+        amenities: '',
+        images: []
+      });
+      
+      // Refresh apartments list
       fetchApartments();
     } catch (error) {
       console.error('Error adding apartment:', error);
@@ -388,33 +383,37 @@ const LandlordDashboard = () => {
 
       {activeTab === 'apartments' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {apartments.map((apt) => (
-            <div key={apt.id} className="border rounded-lg overflow-hidden shadow bg-white dark:bg-gray-800 dark:border-gray-700">
-              <div className="aspect-w-16 aspect-h-9">
-                <img 
-                  src={apt.image} 
-                  alt={apt.title}
-                  className="object-cover w-full h-48"
-                  onError={(e) => {
-                    e.target.src = '/placeholder-apartment.jpg'; // Add a placeholder image
-                  }}
-                />
+          {loading ? (
+            <div className="col-span-3 text-center py-4">
+              <FaSpinner className="animate-spin inline-block mr-2" />
+              Loading apartments...
+            </div>
+          ) : apartments.length === 0 ? (
+            <div className="col-span-3 text-center py-4">
+              No apartments found
+            </div>
+          ) : (
+            apartments.map((apt) => (
+              <div key={apt._id} className="border rounded-lg overflow-hidden shadow bg-white">
+                <div className="aspect-w-16 aspect-h-9">
+                  <img 
+                    src={apt.imageUrl}
+                    alt={apt.title}
+                    className="object-cover w-full h-48"
+                    onError={(e) => {
+                      e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
+                    }}
+                  />
+                </div>
+                <div className="p-4">
+                  <h3 className="text-xl font-semibold">{apt.title}</h3>
+                  <p className="text-blue-500 font-semibold">{apt.price} MATIC/month</p>
+                  <p className="text-gray-500">{apt.location}</p>
+                </div>
               </div>
-              <div className="p-4">
-                <h3 className="text-xl font-semibold dark:text-white">{apt.title}</h3>
-                <p className="text-blue-500 dark:text-blue-400 font-semibold">{apt.rent} MATIC/month</p>
-                <p className="text-gray-500 dark:text-gray-400">{apt.location}</p>
-                <p className={`${
-                  apt.available 
-                    ? 'text-green-500 dark:text-green-400' 
-                    : 'text-red-500 dark:text-red-400'
-                }`}>
-                  {apt.available ? 'Available' : 'Occupied'}
-                </p>
-              </div>
-          </div>
-        ))}
-      </div>
+            ))
+          )}
+        </div>
       )}
 
       {activeTab === 'tenants' && (

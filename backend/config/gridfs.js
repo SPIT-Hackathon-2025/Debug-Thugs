@@ -50,7 +50,10 @@ const storage = new GridFsStorage({
                 const filename = buf.toString('hex') + path.extname(file.originalname);
                 const fileInfo = {
                     filename: filename,
-                    bucketName: 'uploads'
+                    bucketName: 'uploads',
+                    metadata: {
+                        contentType: file.mimetype
+                    }
                 };
                 resolve(fileInfo);
             });
@@ -74,4 +77,9 @@ const upload = multer({
     }
 });
 
-module.exports = { initGridFS, gridfsBucket, upload };
+module.exports = {
+    initGridFS,
+    storage,
+    getGFS: () => gridfsBucket,
+    upload
+};

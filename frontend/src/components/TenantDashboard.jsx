@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { CONTRACT_ADDRESSES, CONTRACT_ABIS, MONITORED_ADDRESSES } from '../config/contracts';
+import { CONTRACT_ADDRESSES, CONTRACT_ABIS, MONITORED_ADDRESSES, NETWORK_CONFIG, getProvider, getContractInstance } from '../config/contracts';
 import { getMaticPrice } from '../utils/price';
+import { FaSpinner } from 'react-icons/fa';
 
 const TenantDashboard = () => {
   const [apartments, setApartments] = useState([]);
@@ -15,40 +16,17 @@ const TenantDashboard = () => {
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [selectedApartment, setSelectedApartment] = useState(null);
   const [review, setReview] = useState({ rating: 5, comment: '' });
+  const [fetchError, setFetchError] = useState(null);
+  const [showRentalForm, setShowRentalForm] = useState(false);
+  const [rentalFormData, setRentalFormData] = useState({
+    startDate: '',
+    duration: '12', // months
+    depositAmount: ''
+  });
 
   const contractAddress = CONTRACT_ADDRESSES.PaymentDeposit;
 
-  // Mock data for demonstration
-  const hardcodedApartments = [
-    { 
-      id: 1, 
-      title: "Luxury Apartment", 
-      rent: "0.1", 
-      location: "New York", 
-      available: true,
-      image: "https://imgs.search.brave.com/CIV_jb0lU2Hk9jyM_geRheWsbU61AoXpMeCJREIoL00/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvMTI5/MTc5NjYwL3Bob3Rv/L2x1eHVyaW91cy1h/cGFydG1lbnQtaW4t/dGhlLW5pZ2h0Lmpw/Zz9zPTYxMng2MTIm/dz0wJms9MjAmYz1J/Nmw5TU1pMnRwMGd2/ODlIQ2ZZaUVIZXFD/SGpIUUdmcFV3ajNf/QkJzZmxFPQ"
-    },
-    { 
-      id: 2, 
-      title: "Cozy Studio", 
-      rent: "0.05", 
-      location: "Los Angeles", 
-      available: false,
-      image: "https://imgs.search.brave.com/cOlHqns63MCPrw9YJ2w0HsVLFWD1l9-H5gLHfr4ehRk/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/dGhlc3BydWNlLmNv/bS90aG1iL3l0TkRa/OXNITGllTUJMTGp5/VjVSN0gxYTFLUT0v/MTUwMHgwL2ZpbHRl/cnM6bm9fdXBzY2Fs/ZSgpOm1heF9ieXRl/cygxNTAwMDApOnN0/cmlwX2ljYygpLzEz/LURvdWJsZS1EdXR5/LUJlZC1EcmFtYS01/ODc2ODA3YzVmOWI1/ODRkYjNhYTUyNGIu/anBn"
-    },
-    { 
-      id: 3, 
-      title: "Antilia", 
-      rent: "0.1", 
-      location: "Australia", 
-      available: true,
-      image: "https://imgs.search.brave.com/_9L_1yLOZgd_pQA_MObqyiQiwH8Map7vPRZiZbK2lEo/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9vbmVs/aWdodGtjLmNvbS93/cC1jb250ZW50L3Vw/bG9hZHMvMjAxOS8x/Mi82LWJ1aWxkaW5n/LWFtZW5pdGllcy1i/Zy01LmpwZw" // Add actual image URL
-    },
-  ];
-
   useEffect(() => {
-    // For now, use the hardcoded data instead of fetching
-    setApartments(hardcodedApartments);
     const fetchAccount = async () => {
       if (window.ethereum) {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
@@ -128,6 +106,31 @@ const TenantDashboard = () => {
     }
   };
 
+  const fetchApartments = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5000/api/apartments');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch apartments');
+      }
+      
+      const data = await response.json();
+      setApartments(data);
+      setFetchError(null);
+    } catch (error) {
+      console.error('Error fetching apartments:', error);
+      setFetchError('Failed to load apartments');
+      setApartments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchApartments();
+  }, []);
+
   const handleRentPayment = async (apartment) => {
     if (!window.ethereum) {
       alert('Please install MetaMask!');
@@ -136,7 +139,7 @@ const TenantDashboard = () => {
 
     try {
       setLoading(true);
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const provider = getProvider();
       const signer = provider.getSigner();
       const contract = new ethers.Contract(
         CONTRACT_ADDRESSES.PaymentDeposit,
@@ -145,11 +148,12 @@ const TenantDashboard = () => {
       );
       
       const tx = await contract.payRent({
-        value: ethers.utils.parseEther(apartment.rent.toString())
+        value: ethers.utils.parseEther(apartment.price.toString())
       });
       await tx.wait();
       alert('Payment successful!');
       fetchTransactions();
+      fetchApartments();
     } catch (error) {
       console.error('Error processing payment:', error);
       alert("Payment failed. See console for details.");
@@ -170,7 +174,7 @@ const TenantDashboard = () => {
 
       const tx = await contract.approveAutoDebit(
         apartment._id,
-        ethers.utils.parseEther(apartment.rent.toString())
+        ethers.utils.parseEther(apartment.price.toString())
       );
       await tx.wait();
       alert('Auto-debit setup successful!');
@@ -206,12 +210,7 @@ const TenantDashboard = () => {
 
   const fetchBalance = async (address) => {
     try {
-      if (!window.ethereum) {
-        console.error('MetaMask is not installed');
-        return;
-      }
-
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const provider = getProvider();
       const balanceWei = await provider.getBalance(address);
       const balanceEth = ethers.utils.formatEther(balanceWei);
       const balanceMatic = parseFloat(balanceEth).toFixed(4);
@@ -259,6 +258,162 @@ const TenantDashboard = () => {
     }
   };
 
+  const handleRentClick = (apartment) => {
+    setSelectedApartment(apartment);
+    setShowRentalForm(true);
+    setRentalFormData({
+      ...rentalFormData,
+      depositAmount: apartment.price * 2 // 2 months deposit
+    });
+  };
+
+  const validateRentalForm = () => {
+    if (!rentalFormData.startDate) {
+        alert('Please select a start date');
+        return false;
+    }
+    if (!rentalFormData.duration) {
+        alert('Please select a lease duration');
+        return false;
+    }
+    if (!selectedApartment.landlord) {
+        alert('Invalid landlord address');
+        return false;
+    }
+    return true;
+  };
+
+  const handleRentalSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateRentalForm()) return;
+    setLoading(true);
+
+    try {
+        // Get accounts
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const userAddress = accounts[0];
+
+        // Switch network if needed
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        if (chainId !== NETWORK_CONFIG.chainId) {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: NETWORK_CONFIG.chainId }],
+                });
+            } catch (switchError) {
+                if (switchError.code === 4902) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [NETWORK_CONFIG],
+                    });
+                } else {
+                    throw switchError;
+                }
+            }
+        }
+
+        const provider = getProvider();
+        const signer = provider.getSigner();
+
+        // Format amounts properly
+        const rentAmount = ethers.utils.parseEther(selectedApartment.price.toString());
+        const depositAmount = rentAmount.mul(2);
+        const totalAmount = rentAmount.add(depositAmount);
+
+        // Get current gas price
+        const gasPrice = await provider.getGasPrice();
+        console.log('Current gas price:', gasPrice.toString());
+
+        // Prepare transaction parameters
+        const createRentalParams = {
+            landlordAddress: selectedApartment.landlord,
+            propertyId: selectedApartment._id.toString().substring(0, 31),
+            duration: ethers.BigNumber.from(rentalFormData.duration),
+            rentAmount: rentAmount
+        };
+
+        // Get contract instance
+        const contract = getContractInstance('RentalContract', signer);
+
+        // Prepare transaction options with specific gas settings
+        const txOptions = {
+            value: totalAmount,
+            gasLimit: ethers.BigNumber.from('3000000'), // 3 million gas
+            gasPrice: gasPrice.mul(120).div(100), // Add 20% to current gas price
+            nonce: await provider.getTransactionCount(userAddress, 'latest')
+        };
+
+        console.log('Transaction options:', {
+            value: txOptions.value.toString(),
+            gasLimit: txOptions.gasLimit.toString(),
+            gasPrice: txOptions.gasPrice.toString(),
+            nonce: txOptions.nonce
+        });
+
+        // Send transaction with specific gas settings
+        const tx = await contract.createRental(
+            createRentalParams.landlordAddress,
+            createRentalParams.propertyId,
+            createRentalParams.duration,
+            createRentalParams.rentAmount,
+            txOptions
+        );
+
+        console.log('Transaction sent:', tx.hash);
+
+        // Wait for confirmation
+        const receipt = await tx.wait(1); // Wait for 1 confirmation
+        console.log('Transaction receipt:', {
+            status: receipt.status,
+            gasUsed: receipt.gasUsed.toString(),
+            effectiveGasPrice: receipt.effectiveGasPrice.toString(),
+            blockNumber: receipt.blockNumber
+        });
+
+        if (receipt.status === 1) {
+            // Update backend
+            const updateResponse = await fetch(`http://localhost:5000/api/apartments/${selectedApartment._id}/rent`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tenantAddress: userAddress,
+                    startDate: rentalFormData.startDate,
+                    duration: parseInt(rentalFormData.duration),
+                    rentAmount: selectedApartment.price,
+                    depositAmount: selectedApartment.price * 2,
+                    transactionHash: tx.hash
+                })
+            });
+
+            if (!updateResponse.ok) {
+                throw new Error('Failed to update apartment status');
+            }
+
+            alert('Rental agreement created successfully!');
+            setShowRentalForm(false);
+            fetchApartments();
+        } else {
+            throw new Error('Transaction failed');
+        }
+    } catch (error) {
+        console.error('Error creating rental:', error);
+        let errorMessage = 'Failed to create rental agreement: ';
+        
+        if (error.error && error.error.message) {
+            errorMessage += error.error.message;
+        } else if (error.message) {
+            errorMessage += error.message;
+        } else {
+            errorMessage += 'Unknown error';
+        }
+        
+        alert(errorMessage);
+    } finally {
+        setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
@@ -299,48 +454,57 @@ const TenantDashboard = () => {
 
       {activeTab === 'available' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {hardcodedApartments.map((apt) => (
-            <div key={apt.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-              <img
-                src={apt.image}
-                alt={apt.title}
-                className="w-full h-48 object-cover"
-              />
-              <div className="p-4">
-                <h3 className="text-xl font-semibold mb-2">{apt.title}</h3>
-                <p className="text-gray-600 dark:text-gray-300 mb-2">
-                  Location: {apt.location}
-                </p>
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-lg font-bold">
-                    {apt.rent} MATIC
-                    {maticPrice && (
-                      <span className="text-sm text-gray-500 ml-2">
-                        (${(parseFloat(apt.rent) * maticPrice).toFixed(2)})
-                      </span>
-                    )}
-                  </span>
-                  <span className={`px-2 py-1 rounded ${
-                    apt.available 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {apt.available ? 'Available' : 'Rented'}
-                  </span>
+          {loading ? (
+            <div className="col-span-3 text-center py-4">
+              <FaSpinner className="animate-spin inline-block mr-2" />
+              Loading apartments...
+            </div>
+          ) : fetchError ? (
+            <div className="col-span-3 text-center py-4 text-red-500">
+              {fetchError}
+            </div>
+          ) : apartments.length === 0 ? (
+            <div className="col-span-3 text-center py-4">
+              No apartments available at the moment.
+            </div>
+          ) : (
+            apartments.map((apt) => (
+              <div key={apt._id} className="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div className="relative h-48">
+                  <img
+                    src={apt.imageUrl}
+                    alt={apt.title}
+                    className="absolute w-full h-full object-cover"
+                    onError={(e) => {
+                      console.log('Image failed to load:', apt.imageUrl);
+                      e.target.src = 'https://via.placeholder.com/400x300?text=No+Image';
+                    }}
+                  />
                 </div>
-                {apt.available && (
+                <div className="p-4">
+                  <h3 className="text-xl font-semibold">{apt.title}</h3>
+                  <p className="text-gray-600">Location: {apt.location}</p>
+                  <div className="flex justify-between items-center mt-4">
+                    <span className="text-lg font-bold">
+                      {apt.price} MATIC
+                      {maticPrice && (
+                        <span className="text-sm text-gray-500 ml-2">
+                          (${(parseFloat(apt.price) * maticPrice).toFixed(2)})
+                        </span>
+                      )}
+                    </span>
+                  </div>
                   <button
-                    onClick={() => handleRentPayment(apt)}
+                    onClick={() => handleRentClick(apt)}
                     disabled={loading}
-                    className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 
-                      transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-blue-500 text-white py-2 rounded mt-4 hover:bg-blue-600 disabled:bg-gray-400"
                   >
                     {loading ? 'Processing...' : 'Rent Now'}
                   </button>
-                )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       )}
 
@@ -444,6 +608,100 @@ const TenantDashboard = () => {
                   Submit Review
                 </button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showRentalForm && selectedApartment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold">Rent Apartment</h3>
+              <button 
+                onClick={() => setShowRentalForm(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <img
+                src={selectedApartment.imageUrl}
+                alt={selectedApartment.title}
+                className="w-full h-48 object-cover rounded"
+              />
+              <h4 className="text-lg font-semibold mt-2">{selectedApartment.title}</h4>
+              <p className="text-gray-600">{selectedApartment.location}</p>
+              <p className="text-blue-500 font-semibold">
+                {selectedApartment.price} MATIC/month
+              </p>
+            </div>
+
+            <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (!validateRentalForm()) return;
+                await handleRentalSubmit(e);
+            }}>
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  min={new Date().toISOString().split('T')[0]}
+                  value={rentalFormData.startDate}
+                  onChange={(e) => setRentalFormData({
+                    ...rentalFormData,
+                    startDate: e.target.value
+                  })}
+                  className="w-full p-2 border rounded"
+                  required
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  Lease Duration (months)
+                </label>
+                <select
+                  value={rentalFormData.duration}
+                  onChange={(e) => setRentalFormData({
+                    ...rentalFormData,
+                    duration: e.target.value
+                  })}
+                  className="w-full p-2 border rounded"
+                  required
+                >
+                  <option value="12">12 months</option>
+                  <option value="6">6 months</option>
+                  <option value="3">3 months</option>
+                </select>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  Security Deposit (MATIC)
+                </label>
+                <input
+                  type="number"
+                  value={rentalFormData.depositAmount}
+                  readOnly
+                  className="w-full p-2 border rounded bg-gray-100"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  2 months rent as security deposit
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+              >
+                {loading ? 'Processing...' : 'Confirm Rental'}
+              </button>
             </form>
           </div>
         </div>
