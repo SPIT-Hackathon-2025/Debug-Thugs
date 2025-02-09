@@ -18,8 +18,29 @@ const TenantDashboard = () => {
 
   const contractAddress = CONTRACT_ADDRESSES.PaymentDeposit;
 
+  // Mock data for demonstration
+  const hardcodedApartments = [
+    { 
+      id: 1, 
+      title: "Luxury Apartment", 
+      rent: "0.1", 
+      location: "New York", 
+      available: true,
+      image: "https://imgs.search.brave.com/CIV_jb0lU2Hk9jyM_geRheWsbU61AoXpMeCJREIoL00/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvMTI5/MTc5NjYwL3Bob3Rv/L2x1eHVyaW91cy1h/cGFydG1lbnQtaW4t/dGhlLW5pZ2h0Lmpw/Zz9zPTYxMng2MTIm/dz0wJms9MjAmYz1J/Nmw5TU1pMnRwMGd2/ODlIQ2ZZaUVIZXFD/SGpIUUdmcFV3ajNf/QkJzZmxFPQ"
+    },
+    { 
+      id: 2, 
+      title: "Cozy Studio", 
+      rent: "0.05", 
+      location: "Los Angeles", 
+      available: false,
+      image: "https://imgs.search.brave.com/cOlHqns63MCPrw9YJ2w0HsVLFWD1l9-H5gLHfr4ehRk/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/dGhlc3BydWNlLmNv/bS90aG1iL3l0TkRa/OXNITGllTUJMTGp5/VjVSN0gxYTFLUT0v/MTUwMHgwL2ZpbHRl/cnM6bm9fdXBzY2Fs/ZSgpOm1heF9ieXRl/cygxNTAwMDApOnN0/cmlwX2ljYygpLzEz/LURvdWJsZS1EdXR5/LUJlZC1EcmFtYS01/ODc2ODA3YzVmOWI1/ODRkYjNhYTUyNGIu/anBn"
+    },
+  ];
+
   useEffect(() => {
-    fetchApartments();
+    // For now, use the hardcoded data instead of fetching
+    setApartments(hardcodedApartments);
     const fetchAccount = async () => {
       if (window.ethereum) {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
@@ -45,16 +66,6 @@ const TenantDashboard = () => {
 
     return () => clearInterval(interval);
   }, [account]);
-
-  const fetchApartments = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/apartments');
-      const data = await response.json();
-      setApartments(data);
-    } catch (error) {
-      console.error('Error fetching apartments:', error);
-    }
-  };
 
   const fetchTransactions = async () => {
     if (!window.ethereum) {
@@ -280,54 +291,45 @@ const TenantDashboard = () => {
 
       {activeTab === 'available' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {apartments.filter(apt => apt.available).map((apt) => (
-            <div key={apt._id} className="border rounded-lg overflow-hidden shadow bg-white dark:bg-gray-800 dark:border-gray-700">
-              <div className="aspect-w-16 aspect-h-9">
-                <img 
-                  src={apt.image} 
-                  alt={apt.title}
-                  className="object-cover w-full h-48"
-                  onError={(e) => {
-                    e.target.src = '/placeholder-apartment.jpg'; // Add a placeholder image
-                  }}
-                />
-              </div>
+          {hardcodedApartments.map((apt) => (
+            <div key={apt.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+              <img
+                src={apt.image}
+                alt={apt.title}
+                className="w-full h-48 object-cover"
+              />
               <div className="p-4">
-                <h3 className="text-xl font-semibold dark:text-white">{apt.title}</h3>
-                <p className="text-gray-600 dark:text-gray-300">{apt.description}</p>
-                <p className="text-blue-500 dark:text-blue-400 font-semibold">{apt.rent} MATIC/month</p>
-                <p className="text-gray-500 dark:text-gray-400">{apt.location}</p>
-                
-                <div className="mt-4">
+                <h3 className="text-xl font-semibold mb-2">{apt.title}</h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-2">
+                  Location: {apt.location}
+                </p>
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-lg font-bold">
+                    {apt.rent} MATIC
+                    {maticPrice && (
+                      <span className="text-sm text-gray-500 ml-2">
+                        (${(parseFloat(apt.rent) * maticPrice).toFixed(2)})
+                      </span>
+                    )}
+                  </span>
+                  <span className={`px-2 py-1 rounded ${
+                    apt.available 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {apt.available ? 'Available' : 'Rented'}
+                  </span>
+                </div>
+                {apt.available && (
                   <button
                     onClick={() => handleRentPayment(apt)}
                     disabled={loading}
-                    className="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600 
+                    className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 
                       transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Processing...' : 'Rent Now'}
                   </button>
-                </div>
-
-                <div className="mt-4">
-                  <h4 className="font-semibold mb-2 dark:text-white">Reviews</h4>
-                  {apt.reviews?.map((review, index) => (
-                    <div key={index} className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      {review}
-                    </div>
-                  ))}
-                  <textarea
-                    className="w-full border rounded p-2 mt-2 dark:bg-gray-700 dark:border-gray-600 
-                      dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Write a review..."
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        submitReview(e);
-                        e.target.value = '';
-                      }
-                    }}
-                  />
-                </div>
+                )}
               </div>
             </div>
           ))}

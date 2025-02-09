@@ -35,7 +35,7 @@ const LandlordDashboard = () => {
       rent: "0.1", 
       location: "New York", 
       available: true,
-      image: "https://your-image-url.com/luxury-apt.jpg" // Add actual image URL
+      image: "https://imgs.search.brave.com/CIV_jb0lU2Hk9jyM_geRheWsbU61AoXpMeCJREIoL00/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvMTI5/MTc5NjYwL3Bob3Rv/L2x1eHVyaW91cy1h/cGFydG1lbnQtaW4t/dGhlLW5pZ2h0Lmpw/Zz9zPTYxMng2MTIm/dz0wJms9MjAmYz1J/Nmw5TU1pMnRwMGd2/ODlIQ2ZZaUVIZXFD/SGpIUUdmcFV3ajNf/QkJzZmxFPQ" // Add actual image URL
     },
     { 
       id: 2, 
@@ -43,7 +43,7 @@ const LandlordDashboard = () => {
       rent: "0.05", 
       location: "Los Angeles", 
       available: false,
-      image: "https://your-image-url.com/cozy-studio.jpg" // Add actual image URL
+      image: "https://imgs.search.brave.com/cOlHqns63MCPrw9YJ2w0HsVLFWD1l9-H5gLHfr4ehRk/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly93d3cu/dGhlc3BydWNlLmNv/bS90aG1iL3l0TkRa/OXNITGllTUJMTGp5/VjVSN0gxYTFLUT0v/MTUwMHgwL2ZpbHRl/cnM6bm9fdXBzY2Fs/ZSgpOm1heF9ieXRl/cygxNTAwMDApOnN0/cmlwX2ljYygpLzEz/LURvdWJsZS1EdXR5/LUJlZC1EcmFtYS01/ODc2ODA3YzVmOWI1/ODRkYjNhYTUyNGIu/anBn" // Add actual image URL
     },
   ];
 
