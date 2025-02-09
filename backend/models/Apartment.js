@@ -1,43 +1,81 @@
 const mongoose = require("mongoose");
 
-const ApartmentSchema = new mongoose.Schema({
-    landlord: { type: String, required: true }, // wallet address
-    title: { type: String, required: true },
-    description: { type: String, required: true },
+const reviewSchema = new mongoose.Schema({
+    tenant: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    rating: {
+        type: Number,
+        required: true,
+        min: 1,
+        max: 5
+    },
+    comment: {
+        type: String,
+        required: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+
+const apartmentSchema = new mongoose.Schema({
+    landlord: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    title: {
+        type: String,
+        required: true
+    },
+    description: {
+        type: String,
+        required: true
+    },
     location: {
-        address: { type: String, required: true },
-        city: { type: String, required: true },
+        address: String,
+        city: String,
+        state: String,
+        zipCode: String,
         coordinates: {
-            lat: { type: Number },
-            lng: { type: Number }
+            lat: Number,
+            lng: Number
         }
     },
     price: {
-        amount: { type: Number, required: true },
-        currency: { type: String, default: 'ETH' }
+        amount: Number,
+        currency: {
+            type: String,
+            default: 'ETH'
+        }
     },
-    features: [{
-        type: String
+    images: [{
+        type: String // GridFS file IDs
     }],
-    images: [{ type: String }],
     availability: {
-        isAvailable: { type: Boolean, default: true },
-        availableFrom: { type: Date },
-        availableTo: { type: Date }
+        isAvailable: {
+            type: Boolean,
+            default: true
+        },
+        availableFrom: Date,
+        availableTo: Date
     },
-    propertyType: { type: String, enum: ['apartment', 'house', 'studio', 'room'] },
-    amenities: [{
-        type: String
-    }],
-    rules: [{ type: String }],
-    reviews: [{
-        tenant: { type: String }, // wallet address
-        rating: { type: Number },
-        comment: { type: String },
-        date: { type: Date, default: Date.now }
-    }],
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
-});
+    propertyType: String,
+    amenities: [String],
+    rules: [String],
+    reviews: [reviewSchema],
+    contractAddress: String, // Smart contract address
+    depositAmount: Number,
+    rentDueDate: Number, // Day of month
+    currentTenant: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
+    rentalAgreementHash: String // IPFS hash of rental agreement
+}, { timestamps: true });
 
-module.exports = mongoose.model("Apartment", ApartmentSchema);
+module.exports = mongoose.model("Apartment", apartmentSchema);
